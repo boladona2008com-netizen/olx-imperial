@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>OLX Imperial RP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+}
+header {
+    background: #111;
+    color: gold;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+}
+.container {
+    padding: 15px;
+}
+input, textarea, button {
+    width: 100%;
+    margin: 6px 0;
+    padding: 10px;
+}
+button {
+    background: black;
+    color: gold;
+    border: none;
+    cursor: pointer;
+}
+.card {
+    background: white;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+}
+img {
+    max-width: 100%;
+    border-radius: 5px;
+}
+.admin {
+    border: 2px solid red;
+}
+.hidden {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<header>OLX IMPERIAL – RP</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="login">
+    <h3>Login</h3>
+    <input id="user" placeholder="Usuário">
+    <input id="pass" type="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+<h3 id="welcome"></h3>
+
+<!-- CRIAR ANUNCIO -->
+<div class="card">
+    <h4>Novo Anúncio</h4>
+    <input id="title" placeholder="Título">
+    <textarea id="desc" placeholder="Descrição"></textarea>
+    <input id="price" placeholder="Preço">
+    <input type="file" id="photo">
+    <button onclick="addAd()">Publicar</button>
+</div>
+
+<h3>Anúncios</h3>
+<div id="ads"></div>
+
+</div>
+</div>
+
+<script>
+let currentUser = null;
+let isAdmin = false;
+
+function login() {
+    const user = document.getElementById('user').value;
+    const pass = document.getElementById('pass').value;
+
+    if (!user || !pass) return alert("Preencha tudo");
+
+    currentUser = user;
+    isAdmin = pass === "ryan_imperial";
+
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('welcome').innerText =
+        "Bem-vindo " + user + (isAdmin ? " (ADMIN IMPERIAL)" : "");
+
+    loadAds();
+}
+
+function addAd() {
+    const title = document.getElementById('title').value;
+    const desc = document.getElementById('desc').value;
+    const price = document.getElementById('price').value;
+    const photoInput = document.getElementById('photo');
+
+    if (!title || !desc || !price || !photoInput.files[0])
+        return alert("Preencha tudo");
+
+    const reader = new FileReader();
+    reader.onload = function() {
+        const ads = JSON.parse(localStorage.getItem('ads') || "[]");
+
+        ads.push({
+            id: Date.now(),
+            user: currentUser,
+            title,
+            desc,
+            price,
+            photo: reader.result
+        });
+
+        localStorage.setItem('ads', JSON.stringify(ads));
+        loadAds();
+    };
+    reader.readAsDataURL(photoInput.files[0]);
+}
+
+function loadAds() {
+    const adsDiv = document.getElementById('ads');
+    adsDiv.innerHTML = "";
+
+    const ads = JSON.parse(localStorage.getItem('ads') || "[]");
+
+    ads.forEach(ad => {
+        const div = document.createElement('div');
+        div.className = "card" + (isAdmin ? " admin" : "");
+        div.innerHTML = `
+            <h4>${ad.title}</h4>
+            <p>${ad.desc}</p>
+            <b>R$ ${ad.price}</b>
+            <p>Vendedor: ${ad.user}</p>
+            <img src="${ad.photo}">
+            ${isAdmin ? `<button onclick="removeAd(${ad.id})">Suspender</button>` : ""}
+        `;
+        adsDiv.appendChild(div);
+    });
+}
+
+function removeAd(id) {
+    if (!isAdmin) return;
+    let ads = JSON.parse(localStorage.getItem('ads') || "[]");
+    ads = ads.filter(ad => ad.id !== id);
+    localStorage.setItem('ads', JSON.stringify(ads));
+    loadAds();
+}
+</script>
+
+</body>
+</html>
