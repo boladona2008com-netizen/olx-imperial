@@ -2,86 +2,78 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>OLX Imperial RP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<title>OLX Imperial RP</title>
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
-    margin: 0;
-}
-header {
-    background: #111;
-    color: gold;
-    padding: 15px;
-    text-align: center;
-    font-weight: bold;
-}
-.container {
-    padding: 15px;
-}
-input, textarea, button {
-    width: 100%;
-    margin: 6px 0;
-    padding: 10px;
-}
-button {
-    background: black;
-    color: gold;
-    border: none;
-    cursor: pointer;
-}
-.card {
-    background: white;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
-}
-img {
-    max-width: 100%;
-    border-radius: 5px;
-}
-.admin {
-    border: 2px solid red;
-}
-.hidden {
-    display: none;
-}
+body { margin:0; font-family: Arial; background:#f8f9fa; }
+header { background:#ffcd00; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+header h1 { margin:0; color:#111; font-weight:bold; }
+header button { padding:6px 12px; background:#111; color:#ffcd00; border:none; cursor:pointer; border-radius:3px; }
+.container { max-width:1000px; margin:auto; padding:20px; }
+.card { background:white; border-radius:5px; padding:15px; margin:15px 0; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+.card img { width:100%; max-height:200px; object-fit:cover; border-radius:5px; }
+.card h3 { margin:5px 0; color:#111; }
+.card p { margin:5px 0; color:#555; }
+.card b { color:#111; }
+.admin { border:2px solid red; }
+.hidden { display:none; }
+input, textarea { width:100%; padding:8px; margin:5px 0; border-radius:3px; border:1px solid #ccc; }
+button { cursor:pointer; }
+#chatBox { max-height:200px; overflow-y:auto; border:1px solid #ccc; padding:10px; margin:5px 0; border-radius:3px; background:#fff; }
+.message { margin:5px 0; }
+.message.user { font-weight:bold; color:blue; }
+.message.you { font-weight:bold; color:green; }
 </style>
 </head>
-
 <body>
 
-<header>OLX IMPERIAL – RP</header>
+<header>
+<h1>OLX Imperial RP</h1>
+<button onclick="logout()">Sair</button>
+</header>
 
 <div class="container">
 
 <!-- LOGIN -->
-<div id="login">
-    <h3>Login</h3>
-    <input id="user" placeholder="Usuário">
-    <input id="pass" type="password" placeholder="Senha">
-    <button onclick="login()">Entrar</button>
+<div id="loginBox">
+<h2>Login</h2>
+<input id="username" placeholder="Usuário">
+<input id="password" type="password" placeholder="Senha">
+<button onclick="login()">Entrar</button>
+<p>Admin: use a senha <b>ryan_imperial</b></p>
 </div>
 
 <!-- APP -->
 <div id="app" class="hidden">
 
-<h3 id="welcome"></h3>
+<h2 id="welcome"></h2>
 
-<!-- CRIAR ANUNCIO -->
-<div class="card">
-    <h4>Novo Anúncio</h4>
-    <input id="title" placeholder="Título">
-    <textarea id="desc" placeholder="Descrição"></textarea>
-    <input id="price" placeholder="Preço">
-    <input type="file" id="photo">
-    <button onclick="addAd()">Publicar</button>
+<!-- Novo anúncio -->
+<div class="card" id="newAd">
+<h3>Criar Anúncio</h3>
+<input id="adTitle" placeholder="Título do produto">
+<textarea id="adDesc" placeholder="Descrição"></textarea>
+<input id="adPrice" placeholder="Preço">
+<input type="file" id="adPhoto">
+<button onclick="addAd()">Publicar</button>
 </div>
 
-<h3>Anúncios</h3>
+<h2>Feed de Anúncios</h2>
 <div id="ads"></div>
+
+<!-- Perfil -->
+<div class="card" id="profileBox">
+<h3>Meu Perfil</h3>
+<div id="userAds"></div>
+</div>
+
+<!-- Chat -->
+<div class="card" id="chatCard" class="hidden">
+<h3>Chat</h3>
+<div id="chatBox"></div>
+<input id="chatInput" placeholder="Digite sua mensagem">
+<button onclick="sendMessage()">Enviar</button>
+</div>
 
 </div>
 </div>
@@ -89,37 +81,41 @@ img {
 <script>
 let currentUser = null;
 let isAdmin = false;
+let currentChatUser = null;
 
+// Login
 function login() {
-    const user = document.getElementById('user').value;
-    const pass = document.getElementById('pass').value;
-
-    if (!user || !pass) return alert("Preencha tudo");
-
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if(!user || !pass) return alert("Preencha tudo!");
     currentUser = user;
     isAdmin = pass === "ryan_imperial";
-
-    document.getElementById('login').classList.add('hidden');
+    document.getElementById('loginBox').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-    document.getElementById('welcome').innerText =
-        "Bem-vindo " + user + (isAdmin ? " (ADMIN IMPERIAL)" : "");
-
+    document.getElementById('welcome').innerText = "Bem-vindo " + user + (isAdmin ? " (ADMIN IMPERIAL)" : "");
     loadAds();
+    loadProfile();
 }
 
-function addAd() {
-    const title = document.getElementById('title').value;
-    const desc = document.getElementById('desc').value;
-    const price = document.getElementById('price').value;
-    const photoInput = document.getElementById('photo');
+// Logout
+function logout() {
+    currentUser = null;
+    isAdmin = false;
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginBox').classList.remove('hidden');
+}
 
-    if (!title || !desc || !price || !photoInput.files[0])
-        return alert("Preencha tudo");
+// Criar anúncio
+function addAd() {
+    const title = document.getElementById('adTitle').value.trim();
+    const desc = document.getElementById('adDesc').value.trim();
+    const price = document.getElementById('adPrice').value.trim();
+    const photoInput = document.getElementById('adPhoto');
+    if(!title || !desc || !price || !photoInput.files[0]) return alert("Preencha todos os campos!");
 
     const reader = new FileReader();
     reader.onload = function() {
-        const ads = JSON.parse(localStorage.getItem('ads') || "[]");
-
+        let ads = JSON.parse(localStorage.getItem('ads') || "[]");
         ads.push({
             id: Date.now(),
             user: currentUser,
@@ -128,42 +124,100 @@ function addAd() {
             price,
             photo: reader.result
         });
-
         localStorage.setItem('ads', JSON.stringify(ads));
+        document.getElementById('adTitle').value = "";
+        document.getElementById('adDesc').value = "";
+        document.getElementById('adPrice').value = "";
+        document.getElementById('adPhoto').value = "";
         loadAds();
+        loadProfile();
     };
     reader.readAsDataURL(photoInput.files[0]);
 }
 
+// Carregar anúncios
 function loadAds() {
     const adsDiv = document.getElementById('ads');
     adsDiv.innerHTML = "";
-
-    const ads = JSON.parse(localStorage.getItem('ads') || "[]");
-
+    let ads = JSON.parse(localStorage.getItem('ads') || "[]");
     ads.forEach(ad => {
         const div = document.createElement('div');
         div.className = "card" + (isAdmin ? " admin" : "");
         div.innerHTML = `
-            <h4>${ad.title}</h4>
+            <h3>${ad.title}</h3>
             <p>${ad.desc}</p>
             <b>R$ ${ad.price}</b>
             <p>Vendedor: ${ad.user}</p>
             <img src="${ad.photo}">
+            <button onclick="openChat('${ad.user}')">Chat</button>
             ${isAdmin ? `<button onclick="removeAd(${ad.id})">Suspender</button>` : ""}
         `;
         adsDiv.appendChild(div);
     });
 }
 
-function removeAd(id) {
-    if (!isAdmin) return;
+// Perfil do usuário
+function loadProfile() {
+    const profileDiv = document.getElementById('userAds');
+    profileDiv.innerHTML = "";
     let ads = JSON.parse(localStorage.getItem('ads') || "[]");
-    ads = ads.filter(ad => ad.id !== id);
+    let myAds = ads.filter(a => a.user === currentUser);
+    myAds.forEach(ad => {
+        const div = document.createElement('div');
+        div.className = "card";
+        div.innerHTML = `
+            <h4>${ad.title}</h4>
+            <b>R$ ${ad.price}</b>
+            <button onclick="removeAd(${ad.id})">Excluir</button>
+        `;
+        profileDiv.appendChild(div);
+    });
+}
+
+// Remover anúncio
+function removeAd(id) {
+    let ads = JSON.parse(localStorage.getItem('ads') || "[]");
+    if(!isAdmin) {
+        ads = ads.filter(ad => ad.id !== id || ad.user !== currentUser);
+    } else {
+        ads = ads.filter(ad => ad.id !== id);
+    }
     localStorage.setItem('ads', JSON.stringify(ads));
     loadAds();
+    loadProfile();
+}
+
+// Chat
+function openChat(user) {
+    if(user === currentUser) return alert("Não pode conversar consigo mesmo!");
+    currentChatUser = user;
+    document.getElementById('chatCard').classList.remove('hidden');
+    loadChat();
+}
+
+function sendMessage() {
+    const msg = document.getElementById('chatInput').value.trim();
+    if(!msg || !currentChatUser) return;
+    let chats = JSON.parse(localStorage.getItem('chats') || "[]");
+    chats.push({from:currentUser,to:currentChatUser,text:msg});
+    localStorage.setItem('chats', JSON.stringify(chats));
+    document.getElementById('chatInput').value = "";
+    loadChat();
+}
+
+function loadChat() {
+    const chatDiv = document.getElementById('chatBox');
+    chatDiv.innerHTML = "";
+    let chats = JSON.parse(localStorage.getItem('chats') || "[]");
+    let relevant = chats.filter(c => (c.from===currentUser && c.to===currentChatUser) || (c.from===currentChatUser && c.to===currentUser));
+    relevant.forEach(c => {
+        const div = document.createElement('div');
+        div.className = "message " + (c.from===currentUser ? "you":"user");
+        div.innerText = c.from + ": " + c.text;
+        chatDiv.appendChild(div);
+    });
+    chatDiv.scrollTop = chatDiv.scrollHeight;
 }
 </script>
-
 </body>
-</html>
+    </html>
