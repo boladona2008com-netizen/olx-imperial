@@ -5,25 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OLX Imperial RP</title>
 <style>
-body { margin:0; font-family: Arial; background:#f8f9fa; }
-header { background:#ffcd00; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
-header h1 { margin:0; color:#111; font-weight:bold; }
-header button { padding:6px 12px; background:#111; color:#ffcd00; border:none; cursor:pointer; border-radius:3px; }
-.container { max-width:1000px; margin:auto; padding:20px; }
-.card { background:white; border-radius:5px; padding:15px; margin:15px 0; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
-.card img { width:100%; max-height:200px; object-fit:cover; border-radius:5px; }
-.card h3 { margin:5px 0; color:#111; }
-.card p { margin:5px 0; color:#555; }
-.card b { color:#111; }
-.admin { border:2px solid red; }
-.hidden { display:none; }
-input, textarea { width:100%; padding:8px; margin:5px 0; border-radius:3px; border:1px solid #ccc; }
-button { cursor:pointer; }
-#chatBox { max-height:200px; overflow-y:auto; border:1px solid #ccc; padding:10px; margin:5px 0; border-radius:3px; background:#fff; }
-.message { margin:5px 0; }
-.message.user { font-weight:bold; color:blue; }
-.message.you { font-weight:bold; color:green; }
+body{margin:0;font-family:Arial,sans-serif;background:#f8f9fa;}
+header{background:#ffcd00;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;}
+header h1{margin:0;color:#111;font-weight:bold;}
+header button{padding:6px 12px;background:#111;color:#ffcd00;border:none;cursor:pointer;border-radius:3px;}
+.container{max-width:1200px;margin:auto;padding:20px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:15px;}
+.card{background:white;border-radius:5px;padding:15px;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+.card img{width:100%;height:180px;object-fit:cover;border-radius:5px;}
+.card h3{margin:5px 0;color:#111;}
+.card p{margin:5px 0;color:#555;}
+.card b{color:#111;}
+.admin{border:2px solid red;}
+.hidden{display:none;}
+input,textarea,select{width:100%;padding:8px;margin:5px 0;border-radius:3px;border:1px solid #ccc;}
+button{cursor:pointer;}
+#chatBox{max-height:200px;overflow-y:auto;border:1px solid #ccc;padding:10px;margin:5px 0;border-radius:3px;background:#fff;}
+.message{margin:5px 0;}
+.message.user{font-weight:bold;color:blue;}
+.message.you{font-weight:bold;color:green;}
 </style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 </head>
 <body>
 
@@ -34,190 +41,241 @@ button { cursor:pointer; }
 
 <div class="container">
 
-<!-- LOGIN -->
+<!-- Login -->
 <div id="loginBox">
 <h2>Login</h2>
-<input id="username" placeholder="Usuário">
+<input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Senha">
-<button onclick="login()">Entrar</button>
-<p>Admin: use a senha <b>ryan_imperial</b></p>
+<button onclick="loginUser()">Entrar</button>
+<p>Admin: use senha <b>ryan_imperial</b></p>
 </div>
 
-<!-- APP -->
+<!-- App -->
 <div id="app" class="hidden">
-
 <h2 id="welcome"></h2>
 
-<!-- Novo anúncio -->
-<div class="card" id="newAd">
-<h3>Criar Anúncio</h3>
-<input id="adTitle" placeholder="Título do produto">
-<textarea id="adDesc" placeholder="Descrição"></textarea>
-<input id="adPrice" placeholder="Preço">
-<input type="file" id="adPhoto">
-<button onclick="addAd()">Publicar</button>
+<!-- Criar Pedido -->
+<div class="card">
+<h3>Criar Pedido (RPA)</h3>
+<textarea id="pedidoTexto" placeholder="Descreva seu pedido"></textarea>
+<select id="pedidoCategoria">
+<option value="Eletrônicos">Eletrônicos</option>
+<option value="Veículos">Veículos</option>
+<option value="Roupas">Roupas</option>
+<option value="Imóveis">Imóveis</option>
+<option value="Serviços">Serviços</option>
+</select>
+<input type="file" id="pedidoFoto">
+<button onclick="addPedido()">Enviar Pedido</button>
 </div>
 
-<h2>Feed de Anúncios</h2>
-<div id="ads"></div>
+<h2>Pesquisar / Filtrar</h2>
+<input id="searchInput" placeholder="Pesquisar por palavra-chave">
+<select id="filterCategoria">
+<option value="">Todas categorias</option>
+<option value="Eletrônicos">Eletrônicos</option>
+<option value="Veículos">Veículos</option>
+<option value="Roupas">Roupas</option>
+<option value="Imóveis">Imóveis</option>
+<option value="Serviços">Serviços</option>
+</select>
+<button onclick="loadPedidos()">Filtrar</button>
+
+<h2>Feed de Pedidos</h2>
+<div id="pedidos" class="grid"></div>
 
 <!-- Perfil -->
-<div class="card" id="profileBox">
+<div class="card">
 <h3>Meu Perfil</h3>
-<div id="userAds"></div>
+<div id="userPedidos"></div>
 </div>
 
 <!-- Chat -->
-<div class="card" id="chatCard" class="hidden">
-<h3>Chat</h3>
+<div class="card hidden" id="chatCard">
+<h3>Chat Geral</h3>
 <div id="chatBox"></div>
 <input id="chatInput" placeholder="Digite sua mensagem">
 <button onclick="sendMessage()">Enviar</button>
 </div>
 
 </div>
-</div>
 
 <script>
-let currentUser = null;
-let isAdmin = false;
-let currentChatUser = null;
+// Config Firebase
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_ID",
+  appId: "SEU_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+let currentUser=null;
+let isAdmin=false;
+let currentChatUser=null;
 
 // Login
-function login() {
-    const user = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value.trim();
-    if(!user || !pass) return alert("Preencha tudo!");
-    currentUser = user;
-    isAdmin = pass === "ryan_imperial";
+async function loginUser(){
+    const email=document.getElementById('email').value.trim();
+    const pass=document.getElementById('password').value.trim();
+    if(!email||!pass) return alert("Preencha tudo!");
+    
+    if(pass==="ryan_imperial"){
+        currentUser={email,name:"Admin",admin:true};
+        isAdmin=true;
+        showApp();
+        return;
+    }
+    try{
+        const userCred = await auth.signInWithEmailAndPassword(email,pass);
+        const userDoc = await db.collection("users").doc(userCred.user.uid).get();
+        currentUser={...userDoc.data(),uid:userCred.user.uid,admin:false};
+        isAdmin=false;
+        showApp();
+    }catch(e){alert("Erro no login: "+e.message);}
+}
+
+// Mostrar app
+function showApp(){
     document.getElementById('loginBox').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-    document.getElementById('welcome').innerText = "Bem-vindo " + user + (isAdmin ? " (ADMIN IMPERIAL)" : "");
-    loadAds();
+    document.getElementById('welcome').innerText="Bem-vindo "+currentUser.name+(isAdmin?" (ADMIN)":"");
+    loadPedidos();
     loadProfile();
+    document.getElementById('chatCard').classList.remove('hidden');
 }
 
 // Logout
-function logout() {
-    currentUser = null;
-    isAdmin = false;
+function logout(){
+    auth.signOut();
+    currentUser=null;
+    isAdmin=false;
     document.getElementById('app').classList.add('hidden');
     document.getElementById('loginBox').classList.remove('hidden');
 }
 
-// Criar anúncio
-function addAd() {
-    const title = document.getElementById('adTitle').value.trim();
-    const desc = document.getElementById('adDesc').value.trim();
-    const price = document.getElementById('adPrice').value.trim();
-    const photoInput = document.getElementById('adPhoto');
-    if(!title || !desc || !price || !photoInput.files[0]) return alert("Preencha todos os campos!");
-
-    const reader = new FileReader();
-    reader.onload = function() {
-        let ads = JSON.parse(localStorage.getItem('ads') || "[]");
-        ads.push({
-            id: Date.now(),
-            user: currentUser,
-            title,
-            desc,
-            price,
-            photo: reader.result
-        });
-        localStorage.setItem('ads', JSON.stringify(ads));
-        document.getElementById('adTitle').value = "";
-        document.getElementById('adDesc').value = "";
-        document.getElementById('adPrice').value = "";
-        document.getElementById('adPhoto').value = "";
-        loadAds();
-        loadProfile();
-    };
-    reader.readAsDataURL(photoInput.files[0]);
+// Adicionar pedido
+async function addPedido(){
+    const texto=document.getElementById('pedidoTexto').value.trim();
+    const categoria=document.getElementById('pedidoCategoria').value;
+    const file=document.getElementById('pedidoFoto').files[0];
+    if(!texto) return alert("Digite algo!");
+    
+    let fotoURL="";
+    if(file){
+        const storageRef = storage.ref().child('pedidos/'+Date.now()+'_'+file.name);
+        await storageRef.put(file);
+        fotoURL = await storageRef.getDownloadURL();
+    }
+    
+    await db.collection("pedidos").add({
+        texto,
+        categoria,
+        user:currentUser.email,
+        data:firebase.firestore.FieldValue.serverTimestamp(),
+        foto:fotoURL
+    });
+    
+    document.getElementById('pedidoTexto').value="";
+    document.getElementById('pedidoFoto').value="";
 }
 
-// Carregar anúncios
-function loadAds() {
-    const adsDiv = document.getElementById('ads');
-    adsDiv.innerHTML = "";
-    let ads = JSON.parse(localStorage.getItem('ads') || "[]");
-    ads.forEach(ad => {
-        const div = document.createElement('div');
-        div.className = "card" + (isAdmin ? " admin" : "");
-        div.innerHTML = `
-            <h3>${ad.title}</h3>
-            <p>${ad.desc}</p>
-            <b>R$ ${ad.price}</b>
-            <p>Vendedor: ${ad.user}</p>
-            <img src="${ad.photo}">
-            <button onclick="openChat('${ad.user}')">Chat</button>
-            ${isAdmin ? `<button onclick="removeAd(${ad.id})">Suspender</button>` : ""}
-        `;
-        adsDiv.appendChild(div);
+// Carregar pedidos
+function loadPedidos(){
+    const search=document.getElementById('searchInput').value.toLowerCase();
+    const categoriaFilter=document.getElementById('filterCategoria').value;
+    db.collection("pedidos").orderBy("data","desc").onSnapshot(snap=>{
+        const div=document.getElementById('pedidos');
+        div.innerHTML="";
+        snap.forEach(doc=>{
+            const p=doc.data();
+            if((categoriaFilter===""||p.categoria===categoriaFilter) && (p.texto.toLowerCase().includes(search)||p.categoria.toLowerCase().includes(search))){
+                const card=document.createElement('div');
+                card.className="card"+(isAdmin?" admin":"");
+                card.innerHTML=`
+                    ${p.foto?`<img src="${p.foto}">`:''}
+                    <h3>${p.categoria}</h3>
+                    <p>${p.texto}</p>
+                    <b>Usuário: ${p.user}</b>
+                    ${isAdmin?`<button onclick="removePedido('${doc.id}')">Suspender</button>`:""}
+                    <button onclick="openChat('${p.user}')">Chat</button>
+                `;
+                div.appendChild(card);
+            }
+        });
+        loadProfile();
     });
 }
 
 // Perfil do usuário
-function loadProfile() {
-    const profileDiv = document.getElementById('userAds');
-    profileDiv.innerHTML = "";
-    let ads = JSON.parse(localStorage.getItem('ads') || "[]");
-    let myAds = ads.filter(a => a.user === currentUser);
-    myAds.forEach(ad => {
-        const div = document.createElement('div');
-        div.className = "card";
-        div.innerHTML = `
-            <h4>${ad.title}</h4>
-            <b>R$ ${ad.price}</b>
-            <button onclick="removeAd(${ad.id})">Excluir</button>
-        `;
-        profileDiv.appendChild(div);
+function loadProfile(){
+    db.collection("pedidos").where("user","==",currentUser.email)
+    .get().then(snap=>{
+        const div=document.getElementById('userPedidos');
+        div.innerHTML="";
+        snap.forEach(doc=>{
+            const p=doc.data();
+            const card=document.createElement('div');
+            card.className="card";
+            card.innerHTML=`<p>${p.categoria} - ${p.texto}</p>
+            <button onclick="removePedido('${doc.id}')">Excluir</button>`;
+            div.appendChild(card);
+        });
     });
 }
 
-// Remover anúncio
-function removeAd(id) {
-    let ads = JSON.parse(localStorage.getItem('ads') || "[]");
-    if(!isAdmin) {
-        ads = ads.filter(ad => ad.id !== id || ad.user !== currentUser);
-    } else {
-        ads = ads.filter(ad => ad.id !== id);
-    }
-    localStorage.setItem('ads', JSON.stringify(ads));
-    loadAds();
-    loadProfile();
+// Remover pedido
+function removePedido(id){
+    if(!isAdmin){
+        db.collection("pedidos").doc(id).get().then(d=>{
+            if(d.data().user!==currentUser.email) return alert("Não pode excluir!");
+            db.collection("pedidos").doc(id).delete();
+        });
+    }else db.collection("pedidos").doc(id).delete();
 }
 
-// Chat
-function openChat(user) {
-    if(user === currentUser) return alert("Não pode conversar consigo mesmo!");
-    currentChatUser = user;
-    document.getElementById('chatCard').classList.remove('hidden');
+// Chat geral
+function openChat(user){
+    if(user===currentUser.email) return alert("Não pode conversar consigo mesmo!");
+    currentChatUser=user;
     loadChat();
 }
 
-function sendMessage() {
-    const msg = document.getElementById('chatInput').value.trim();
-    if(!msg || !currentChatUser) return;
-    let chats = JSON.parse(localStorage.getItem('chats') || "[]");
-    chats.push({from:currentUser,to:currentChatUser,text:msg});
-    localStorage.setItem('chats', JSON.stringify(chats));
-    document.getElementById('chatInput').value = "";
-    loadChat();
-}
-
-function loadChat() {
-    const chatDiv = document.getElementById('chatBox');
-    chatDiv.innerHTML = "";
-    let chats = JSON.parse(localStorage.getItem('chats') || "[]");
-    let relevant = chats.filter(c => (c.from===currentUser && c.to===currentChatUser) || (c.from===currentChatUser && c.to===currentUser));
-    relevant.forEach(c => {
-        const div = document.createElement('div');
-        div.className = "message " + (c.from===currentUser ? "you":"user");
-        div.innerText = c.from + ": " + c.text;
-        chatDiv.appendChild(div);
+function sendMessage(){
+    const msg=document.getElementById('chatInput').value.trim();
+    if(!msg||!currentChatUser) return;
+    db.collection("chats").add({
+        from:currentUser.email,
+        to:currentChatUser,
+        text:msg,
+        data:firebase.firestore.FieldValue.serverTimestamp()
     });
-    chatDiv.scrollTop = chatDiv.scrollHeight;
+    document.getElementById('chatInput').value="";
+}
+
+function loadChat(){
+    const chatDiv=document.getElementById('chatBox');
+    chatDiv.innerHTML="";
+    db.collection("chats")
+    .where("from","in",[currentUser.email,currentChatUser])
+    .get().then(snap=>{
+        snap.forEach(doc=>{
+            const c=doc.data();
+            if((c.from===currentUser.email && c.to===currentChatUser) || (c.from===currentChatUser && c.to===currentUser.email)){
+                const div=document.createElement('div');
+                div.className="message "+(c.from===currentUser.email?"you":"user");
+                div.innerText=c.from+": "+c.text;
+                chatDiv.appendChild(div);
+            }
+        });
+        chatDiv.scrollTop=chatDiv.scrollHeight;
+    });
 }
 </script>
 </body>
-    </html>
+</html>
